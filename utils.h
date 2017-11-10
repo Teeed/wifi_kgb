@@ -30,5 +30,6 @@
 
 void hexdump(const uint8_t *data, int len);
 void *xmalloc(int len);
+void *xrealloc(void *ptr, size_t size);
 
 #endif

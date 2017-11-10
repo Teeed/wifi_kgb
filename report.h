@@ -18,43 +18,23 @@
 
 */
 
-#include <stdio.h>
-#include <stdlib.h>
+#ifndef _REPORT_H
+#define _REPORT_H
 
-#include "utils.h"
+#include <stdint.h>
 
-void hexdump(const uint8_t *data, int len)
+#include "report.pb-c.h"
+
+
+struct report
 {
-	int i;
-
-	for(i = 0 ; i < len; i++)
-	{
-		printf("%02x ", data[i]);
-	}
-}
-
-void *xmalloc(int len)
-{
-	void *ptr = malloc(len);
+	Report__ClientReport report;
 	
-	if(ptr == NULL)
-	{
-		printf("stderr: malloc failed\n");
-		exit(1);
-	}
+	char *buffer;
+	uint32_t buffer_length;
+};
 
-	return ptr;
-}
 
-void *xrealloc(void *pptr, size_t size)
-{
-	void *ptr = realloc(pptr, size);
 
-	if(ptr == NULL)
-	{
-		printf("stderr: realloc failed\n");
-		exit(1);
-	}
+#endif
 
-	return ptr;
-}

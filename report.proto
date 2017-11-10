@@ -18,43 +18,33 @@
 
 */
 
-#include <stdio.h>
-#include <stdlib.h>
+syntax = "proto2";
 
-#include "utils.h"
+package report;
 
-void hexdump(const uint8_t *data, int len)
-{
-	int i;
-
-	for(i = 0 ; i < len; i++)
-	{
-		printf("%02x ", data[i]);
-	}
+message SSIDEntry {
+	required bytes ssid = 1;
+	required uint32 packets = 2;
 }
 
-void *xmalloc(int len)
-{
-	void *ptr = malloc(len);
-	
-	if(ptr == NULL)
-	{
-		printf("stderr: malloc failed\n");
-		exit(1);
+message ClientReport {
+	message Report {
+		required uint64 mac = 1;
+
+		optional uint32 packets = 2;
+		optional sint32 average_power = 3;
+		optional uint32 last_frequency = 4;
+
+		message Flags {
+			required bool switched_channels = 1;
+			required bool is_ap = 2;
+			required bool is_probing = 3;
+		}
+		required Flags flags = 5;
+
+		repeated SSIDEntry probe_tracking = 6;
+		repeated SSIDEntry ap_ssid_tracking = 7;
 	}
 
-	return ptr;
-}
-
-void *xrealloc(void *pptr, size_t size)
-{
-	void *ptr = realloc(pptr, size);
-
-	if(ptr == NULL)
-	{
-		printf("stderr: realloc failed\n");
-		exit(1);
-	}
-
-	return ptr;
+	repeated Report report = 1;
 }

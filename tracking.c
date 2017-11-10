@@ -178,6 +178,7 @@ void tracking_print(const struct tracking *tracking)
 		putchar('\n');
 
 		struct defaultdict_entry *pt_dentry = NULL;
+		char ssid[33];
 
 		printf(" Probe tracked: \n");
 		while((pt_dentry = defaultdict_iter(&entry->probe_tracking.dict, pt_dentry)))
@@ -185,9 +186,9 @@ void tracking_print(const struct tracking *tracking)
 			struct ssid_tracking_entry *pt_entry = pt_dentry->data;
 			struct ssid_tracking_key *pt_entry_key = pt_dentry->key;
 
-			char ssid[33];
 			memcpy(ssid, pt_entry_key->ssid, pt_entry_key->ssid_length);
 			ssid[pt_entry_key->ssid_length] = 0;
+
 			printf("  SSID: '%s' packets: %d\n", ssid, pt_entry->packets);
 		}
 		putchar('\n');
@@ -198,9 +199,9 @@ void tracking_print(const struct tracking *tracking)
 			struct ssid_tracking_entry *pt_entry = pt_dentry->data;
 			struct ssid_tracking_key *pt_entry_key = pt_dentry->key;
 
-			char ssid[33];
 			memcpy(ssid, pt_entry_key->ssid, pt_entry_key->ssid_length);
 			ssid[pt_entry_key->ssid_length] = 0;
+
 			printf("  SSID: '%s' packets: %d\n", ssid, pt_entry->packets);
 		}
 		putchar('\n');

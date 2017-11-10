@@ -2,6 +2,9 @@ client
 *.sublime-project
 *.sublime-workspace
 
+*.pb-c.h
+*.pb-c.c
+
 # Prerequisites
 *.d
 
