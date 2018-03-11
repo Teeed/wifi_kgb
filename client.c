@@ -179,6 +179,8 @@ static void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_c
 }
 
 time_t last_report = 0;
+int do_exit = 0;
+
 static int report_to_server(struct wifi_kgb *kgb);
 static void* report_thread(void *arg)
 {
@@ -187,6 +189,11 @@ static void* report_thread(void *arg)
 	for(;;)
 	{
 		sleep(2 * 60);
+
+		if(do_exit)
+		{
+			return 0;
+		}
 
 		report_to_server(kgb);
 		last_report = time(NULL);
@@ -301,6 +308,11 @@ static void* channel_hop_thread(void *arg)
 
 	for(;;)
 	{
+		if(do_exit)
+		{
+			return 0;
+		}
+
 		channel_traverse(kgb->crap_socket, kgb->device_name);
 		// sleep(5 * 60);
 		// exit(1);
@@ -432,6 +444,10 @@ int main(int argc, char * const argv[])
 	pcap_loop(kgb.pcap_handle, -1, got_packet, (void*)&kgb);
 
 	pcap_close(kgb.pcap_handle);
+
+	do_exit = 1;
+	pthread_join(kgb.report_thread, NULL);
+	pthread_join(kgb.channel_hop_thread, NULL);
 
 	tracking_free(&kgb.tracking);
 

@@ -158,7 +158,7 @@ void tracking_print(const struct tracking *tracking)
 		putchar('\n');
 
 		printf(" packets: %d\n", entry->packets);
-		printf(" last_seen: %d\n", entry->last_seen);
+		printf(" last_seen: %ld\n", entry->last_seen);
 		printf(" average_power: %d\n", entry->average_power);
 		printf(" last_frequency: %d\n", entry->last_frequency);
 		printf(" flags:");
