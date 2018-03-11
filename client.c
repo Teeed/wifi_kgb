@@ -52,6 +52,7 @@
 #include "tracking.h"
 #include "utils.h"
 #include "report.h"
+#include "channel.h"
 
 #define BUFFERSIZE 2048
 #define MACADDR_LEN 6
@@ -69,6 +70,7 @@ struct wifi_kgb
 
 	uint8_t mac_addr[MACADDR_LEN];
 	struct sockaddr_in server_addr;
+	int crap_socket;
 	int socket;
 
 
@@ -131,9 +133,6 @@ static void print_process_result(const struct radiotap_rx_info *radiotap_rx_info
 	}
 }
 
-
-
-
 static void pass_result_to_tracking(struct wifi_kgb *kgb, struct process_result *process_result)
 {
 	if(!process_result->ieee80211_info.flags.is_valid)
@@ -187,7 +186,7 @@ static void* report_thread(void *arg)
 
 	for(;;)
 	{
-		sleep(10);
+		sleep(2 * 60);
 
 		report_to_server(kgb);
 		last_report = time(NULL);
@@ -302,7 +301,9 @@ static void* channel_hop_thread(void *arg)
 
 	for(;;)
 	{
-		sleep(5 * 60);
+		channel_traverse(kgb->crap_socket, kgb->device_name);
+		// sleep(5 * 60);
+		// exit(1);
 	}
 
 	return 0;	
@@ -374,9 +375,9 @@ int main(int argc, char * const argv[])
 		return 1;
 	}
 
-
-	kgb.socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if(kgb.socket < 0)
+	kgb.socket = 0;
+	kgb.crap_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if(kgb.crap_socket < 0)
 	{
 		perror("inet sock");
 		
@@ -386,14 +387,13 @@ int main(int argc, char * const argv[])
 	// get mac addr
 	struct ifreq ifr;
 	strncpy(ifr.ifr_name, kgb.device_name, IFNAMSIZ);
-	if(ioctl(kgb.socket, SIOCGIFHWADDR, &ifr) < 0)
+	if(ioctl(kgb.crap_socket, SIOCGIFHWADDR, &ifr) < 0)
 	{
 		fprintf(stderr, "Failed to get card's mac addr\n");
 
 		return 1;
 	}	
 	memcpy(kgb.mac_addr, ifr.ifr_hwaddr.sa_data, MACADDR_LEN);
-	close(kgb.socket);
 
 
 	kgb.server_addr.sin_family = AF_INET;
@@ -447,8 +447,8 @@ int main(int argc, char * const argv[])
 	// 	return 1;
 	// }
 
-
-	close(kgb.socket);
+	close(kgb.crap_socket);
+	// close(kgb.socket);
 
 	return 0;
 }

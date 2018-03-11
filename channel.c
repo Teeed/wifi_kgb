@@ -21,10 +21,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include <math.h>
 #include <sys/ioctl.h>
 #include <linux/wireless.h>
 
 #include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+
 
 #include "channel.h"
 
@@ -51,4 +55,38 @@ int channel_set(const int socket, const char *device_name, const int channel)
 	}
 
 	return 0;
+}
+
+void channel_traverse(const int socket,  const char *device_name)
+{
+	struct iwreq wrq;
+	char buf[sizeof(struct iw_range) * 2];
+	int ret;
+
+	/* Prepare request. */
+	bzero(buf, sizeof(buf));
+	wrq.u.data.pointer = buf;
+	wrq.u.data.length = sizeof(buf);
+	wrq.u.data.flags = 0;
+
+	/* Get range. */
+	strncpy(wrq.ifr_name, device_name, IFNAMSIZ);
+	if ((ret = ioctl(socket, SIOCGIWRANGE, &wrq)) >= 0)
+	{
+		struct iw_range *range = (struct iw_range *) buf;
+		int k;
+
+		/* Compare the frequencies as double to ignore differences in encoding.
+		* Slower, but safer... */
+		for (k = 0; k < range->num_frequency; k++)
+		{
+			// struct iw_freq *freq = &
+			wrq.u.freq = range->freq[k];
+			ioctl(socket, SIOCSIWFREQ, &wrq);
+			printf("%d\n", range->freq[k].m);
+
+			usleep(200000);
+
+		}
+	}
 }

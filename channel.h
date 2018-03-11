@@ -23,6 +23,6 @@
 
 
 int channel_set(const int socket, const char *device_name, const int channel);
-
+void channel_traverse(const int socket,  const char *device_name);
 
 #endif
