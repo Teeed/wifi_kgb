@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 
+#include "tracking.h"
 #include "report.pb-c.h"
 
 
@@ -30,11 +31,14 @@ struct report
 {
 	Report__ClientReport report;
 	
-	char *buffer;
+	uint8_t *buffer;
 	uint32_t buffer_length;
 };
 
-
+void report_init(struct report *report);
+void report_free(struct report *report);
+void report_add_mac(struct report *report, uint64_t mac, struct tracking_entry *tracking_entry);
+void report_serialize(struct report *report, uint64_t ap_mac);
 
 #endif
 

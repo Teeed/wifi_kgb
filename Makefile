@@ -10,7 +10,7 @@ ifeq ($(PROFILE), 1)
 	CFLAGS += -fno-omit-frame-pointer
 endif
 
-LIBS = -lpcap -lprotobuf-c
+LIBS = -lpcap -lprotobuf-c -lpthread
 
 OBJ = defaultdict.o client.o radiotap.o ieee80211.o tracking.o channel.o utils.o report.o report.pb-c.o
 OBJPROTO = report.pb-c.c

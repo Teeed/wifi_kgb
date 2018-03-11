@@ -43,6 +43,7 @@
 #include <assert.h>
 
 #include <pcap.h>
+#include <pthread.h>
 
 #include "client.h"
 
@@ -50,6 +51,7 @@
 #include "ieee80211.h"
 #include "tracking.h"
 #include "utils.h"
+#include "report.h"
 
 #define BUFFERSIZE 2048
 #define MACADDR_LEN 6
@@ -73,6 +75,9 @@ struct wifi_kgb
 	struct tracking tracking;
 
 	pcap_t *pcap_handle;
+	pthread_mutex_t	data_mutex;
+	pthread_t report_thread;
+	pthread_t channel_hop_thread;
 };
 
 
@@ -136,8 +141,10 @@ static void pass_result_to_tracking(struct wifi_kgb *kgb, struct process_result 
 		return; 
 	}
 	
+	pthread_mutex_lock(&kgb->data_mutex);
 	tracking_track(&kgb->tracking, process_result);
-	tracking_print(&kgb->tracking);
+	// tracking_print(&kgb->tracking);
+	pthread_mutex_unlock(&kgb->data_mutex);
 }
 
 static void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
@@ -165,25 +172,140 @@ static void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_c
 
 	if(process_result.ieee80211_info.flags.is_valid)
 	{
-		putchar('\n');
-		print_process_result(&process_result.radiotap_rx_info, &process_result.ieee80211_info);
+		// putchar('\n');
+		// print_process_result(&process_result.radiotap_rx_info, &process_result.ieee80211_info);
 	}
 
 	pass_result_to_tracking(kgb, &process_result);
 }
 
-
-static int reconnect(struct wifi_kgb *kgb)
+time_t last_report = 0;
+static int report_to_server(struct wifi_kgb *kgb);
+static void* report_thread(void *arg)
 {
+	struct wifi_kgb *kgb = (struct wifi_kgb *)arg;
+
+	for(;;)
+	{
+		sleep(10);
+
+		report_to_server(kgb);
+		last_report = time(NULL);
+	}
+	
+	return 0;
+}
+#include "utils.h"
+static int talk_with_server(struct wifi_kgb *kgb)
+{
+	printf("Talking with server\n");
+	// lets serialize current data
+	struct report report;
+	report_init(&report);
+
+	pthread_mutex_lock(&kgb->data_mutex);
+
+	const struct tracking *tracking = &kgb->tracking;
+	struct defaultdict_entry *dentry = NULL;
+	while((dentry = defaultdict_iter(&tracking->mac_dict, dentry)))
+	{
+		struct tracking_entry *entry = (struct tracking_entry *)dentry->data;
+		uint64_t *mac = (uint64_t*)dentry->key;
+		report_add_mac(&report, *mac, entry);
+	}
+
+	uint64_t *mac_addr = (uint64_t*)kgb->mac_addr;
+	report_serialize(&report, *mac_addr);
+
+	size_t offset = 0;
+	size_t written;
+
+	uint32_t data_size = htonl(report.buffer_length);
+
+	if(send(kgb->socket, (char*)&data_size, sizeof(uint32_t), 0) != sizeof(uint32_t))
+	{
+		fprintf(stderr, "Writing data_size to report socket has failed\n");
+		
+		report_free(&report);
+		close(kgb->socket);
+		pthread_mutex_unlock(&kgb->data_mutex);
+		return 1;
+	}
+
+	while((written = send(kgb->socket, report.buffer + offset, report.buffer_length - offset, 0)))
+	{
+		if(written == 0)
+		{
+			fprintf(stderr, "Writing to report socket has failed\n");
+			
+			report_free(&report);
+			close(kgb->socket);
+			pthread_mutex_unlock(&kgb->data_mutex);
+			return 1;
+		}
+
+		offset += written;
+
+		if(offset >= report.buffer_length){
+
+			fprintf(stderr, "Report to server success\n");
+			break;
+		}
+	}
+
+	close(kgb->socket);
+	report_free(&report);
+	tracking_clear(&kgb->tracking, last_report);
+	pthread_mutex_unlock(&kgb->data_mutex);
+
+	return 0;
+}
+
+static int report_to_server(struct wifi_kgb *kgb)
+{
+	kgb->socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if(kgb->socket < 0)
+	{
+		fprintf(stderr, "Creating report socket has failed\n");
+
+		return 1;
+	}
+
+	struct timeval timeout;
+	timeout.tv_sec = 10;
+	timeout.tv_usec = 0;
+
+	if (setsockopt(kgb->socket, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+	{
+		fprintf(stderr, "Failed setting socket options\n");
+
+		close(kgb->socket);
+
+		return 1;
+	}
 
 	if (connect(kgb->socket, (struct sockaddr *) &kgb->server_addr, sizeof(kgb->server_addr)) < 0)
 	{
 		fprintf(stderr, "Could not connect to server\n");
 
+		close(kgb->socket);
+
 		return 1;
 	}
 
-	return 0;
+	return talk_with_server(kgb);
+}
+
+static void* channel_hop_thread(void *arg)
+{
+	struct wifi_kgb *kgb = (struct wifi_kgb *)arg;
+
+	for(;;)
+	{
+		sleep(5 * 60);
+	}
+
+	return 0;	
 }
 
 
@@ -271,6 +393,7 @@ int main(int argc, char * const argv[])
 		return 1;
 	}	
 	memcpy(kgb.mac_addr, ifr.ifr_hwaddr.sa_data, MACADDR_LEN);
+	close(kgb.socket);
 
 
 	kgb.server_addr.sin_family = AF_INET;
@@ -288,8 +411,23 @@ int main(int argc, char * const argv[])
 	// }
 
 
+	pthread_mutex_init(&kgb.data_mutex, NULL);
+
 	tracking_init(&kgb.tracking);
 
+	if(pthread_create(&kgb.report_thread, NULL, report_thread, &kgb))
+	{
+		perror("Creating report_thread failed");
+
+		return 1;
+	}
+
+	if(pthread_create(&kgb.channel_hop_thread, NULL, channel_hop_thread, &kgb))
+	{
+		perror("Creating channel_hop_thread failed");
+
+		return 1;
+	}
 
 	pcap_loop(kgb.pcap_handle, -1, got_packet, (void*)&kgb);
 

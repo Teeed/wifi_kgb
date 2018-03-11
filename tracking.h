@@ -21,6 +21,8 @@
 #ifndef _TRACKING_H
 #define _TRACKING_H
 
+#include <time.h>
+
 #include "wifi_80211.h"
 #include "client.h"
 

@@ -135,7 +135,7 @@ void tracking_track(struct tracking *tracking, struct process_result *process_re
 	}
 	else
 	{
-		entry->average_power = (entry->average_power + power)/2;
+		entry->average_power = (entry->average_power * 5 + power)/6;
 		if(entry->last_frequency != frequency)
 		{
 			entry->flags.switched_channels = 1;
@@ -254,4 +254,11 @@ void tracking_init(struct tracking *tracking)
 void tracking_free(struct tracking *tracking)
 {
 	defaultdict_free(&tracking->mac_dict);
+}
+
+void tracking_clear(struct tracking *tracking, time_t older_than)
+{
+	// TODO: really remove older than X
+	defaultdict_free(&tracking->mac_dict);
+	defaultdict_init(&tracking->mac_dict, tracking_new_fun, tracking_cmp_fun, tracking_free_fun);
 }
