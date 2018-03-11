@@ -85,7 +85,7 @@ void channel_traverse(const int socket,  const char *device_name)
 			ioctl(socket, SIOCSIWFREQ, &wrq);
 			printf("%d\n", range->freq[k].m);
 
-			usleep(200000);
+			usleep(500000);
 
 		}
 	}
