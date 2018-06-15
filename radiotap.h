@@ -21,7 +21,6 @@
 #ifndef _RADIOTAP_H
 #define _RADIOTAP_H
 
-
 #include <stdint.h>
 
 #define RADIOTAP_CHANNEL 3
@@ -35,17 +34,16 @@ struct ieee80211_radiotap_header
 		uint32_t       it_present;     /* fields present */
 } __attribute__((__packed__));
 
-
 struct radiotap_field_channel
 {
 	uint16_t frequency;
 	uint16_t flags;
-};
+} __attribute__((__packed__));
 
 struct radiotap_field_ant_signal
 {
 	int8_t power;
-};
+} __attribute__((__packed__));
 
 struct radiotap_rx_info
 {
@@ -59,9 +57,7 @@ struct radiotap_rx_info
 	} flags;
 };
 
-
 void radiotap_get_rxpower_channel(struct radiotap_rx_info *radiotap_rx_info, struct ieee80211_radiotap_header *radiotap);
 void radiotap_clear(struct radiotap_rx_info *radiotap_rx_info);
-
 
 #endif

@@ -36,7 +36,7 @@ struct ieee80211_info_flags
 	uint8_t is_probe : 1;
 	uint8_t is_beacon : 1;
 	uint8_t is_ssid_valid : 1;
-};	
+} __attribute__((__packed__));	
 
 struct ieee80211_info
 {

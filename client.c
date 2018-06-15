@@ -18,32 +18,28 @@
 
 */
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
 
-
-#include <linux/wireless.h>
-
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-
-
-#include <stdio.h>
+#include <assert.h>
+#include <ctype.h>
+#include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <assert.h>
-
+#include <linux/wireless.h>
+#include <netinet/in.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <pcap.h>
 #include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/socket.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "client.h"
 
@@ -157,11 +153,12 @@ static void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_c
 
 	struct ieee80211_radiotap_header *radiotap_header = (struct ieee80211_radiotap_header*)packet;
 	// strip radiotap header
-	const u_char *packet_data = packet + radiotap_header->it_len;
-	const uint32_t packet_len = header->len - radiotap_header->it_len;
+	const uint16_t it_len = le16toh(radiotap_header->it_len);
+
+	const u_char *packet_data = packet + it_len;
+	const uint32_t packet_len = header->len - it_len;
 
 	struct process_result process_result;
-
 
 	radiotap_clear(&process_result.radiotap_rx_info);
 	radiotap_get_rxpower_channel(&process_result.radiotap_rx_info, radiotap_header);
@@ -171,8 +168,8 @@ static void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_c
 
 	if(process_result.ieee80211_info.flags.is_valid)
 	{
-		// putchar('\n');
-		// print_process_result(&process_result.radiotap_rx_info, &process_result.ieee80211_info);
+		putchar('\n');
+		print_process_result(&process_result.radiotap_rx_info, &process_result.ieee80211_info);
 	}
 
 	pass_result_to_tracking(kgb, &process_result);
