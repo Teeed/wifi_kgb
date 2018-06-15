@@ -62,14 +62,10 @@ struct ieee80211_info
 			uint8_t ssid_length;
 		} beacon_info;
 	};
-};
-
-
+} __attribute__((__packed__));
 
 
 void ieee80211_process_packet(struct ieee80211_info *ieee80211_info, const uint8_t *packet, uint32_t packet_len);
 void ieee80211_clear(struct ieee80211_info *ieee80211_info);
-
-
 
 #endif /* _IEEE80211_H */
